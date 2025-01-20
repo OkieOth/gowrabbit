@@ -1,11 +1,11 @@
 services:
   rabbitmq:
-    image: rabbitmq:3.11.19-management-alpine
+    image: rabbitmq:4-management-alpine
     ports:
       - "5672:5672"   # AMQP port
       - "15672:15672" # RabbitMQ management console port
   init_rabbitmq:
-    image: rabbitmq:3.11.19-management-alpine
+    image: rabbitmq:4-management-alpine
     entrypoint: /init_test_broker.sh
     environment:
       - RABBIT_SERVER=rabbitmq
