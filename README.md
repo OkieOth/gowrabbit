@@ -1,3 +1,5 @@
+![WIP](https://img.shields.io/badge/work%20in%20progress-red)
+
 # gowrabbit
 
 A library to implement wrapper around that standard amqp client for golang for
