@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 
+	"time"
+
 	"github.com/okieoth/gowrabbit/pub"
 	"github.com/okieoth/gowrabbit/shared/amqp"
 	"github.com/okieoth/gowrabbit/sub"
@@ -25,6 +27,10 @@ func main() {
 	//fmt.Printf("Connection: %v\n", connection)
 	if err := connection.Connect(); err == nil {
 		fmt.Println("Successfully connected :)")
+		for {
+			fmt.Println("I am going to sleep for 10s ...")
+			time.Sleep(10 * time.Second)
+		}
 	} else {
 		fmt.Println("Connection failed :-/ ")
 		fmt.Println(err)

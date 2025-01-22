@@ -102,10 +102,40 @@ func (c *Connection) Connect() error {
 	defer c.mutex.Unlock()
 	// TODO - build connection string
 	if conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/"); err == nil {
+		fmt.Println("connection established")
 		c.conn = conn
+		go func() {
+			conClosedChan := make(chan *amqp.Error)
+			if c.conn != nil {
+				err := c.conn.NotifyClose(conClosedChan)
+				if err != nil {
+					// TODO logging
+				}
+				if e, ok := <-conClosedChan; ok {
+					fmt.Println("connection was closed w/ error: ", e)
+				} else {
+					fmt.Println("connection closed")
+				}
+				c.Connect()
+			} else {
+				// TODO logging
+				fmt.Println("connection object is nil")
+			}
+		}()
 		return nil
 	} else {
 		return fmt.Errorf("error, failed to connect to broker: %v", err)
+	}
+}
+
+func (c *Connection) Close() error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	if err := c.conn.Close(); err != nil {
+		c.conn = nil
+		return nil
+	} else {
+		return err
 	}
 }
 
