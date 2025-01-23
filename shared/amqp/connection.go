@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/okieoth/gowrabbit/shared/resilence"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -101,30 +102,37 @@ func (c *Connection) Connect() error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	// TODO - build connection string
-	if conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/"); err == nil {
-		fmt.Println("connection established")
-		c.conn = conn
-		go func() {
-			conClosedChan := make(chan *amqp.Error)
-			if c.conn != nil {
-				err := c.conn.NotifyClose(conClosedChan)
-				if err != nil {
-					// TODO logging
-				}
-				if e, ok := <-conClosedChan; ok {
-					fmt.Println("connection was closed w/ error: ", e)
+	resilentConnectFunc := func() error {
+		if conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/"); err == nil {
+			fmt.Println("connection established")
+			c.conn = conn
+			go func() {
+				conClosedChan := make(chan *amqp.Error)
+				if c.conn != nil {
+					c.conn.NotifyClose(conClosedChan)
+					fmt.Println("listen for connection clossed events ...")
+					if e, ok := <-conClosedChan; ok {
+						fmt.Println("connection was closed w/ error: ", e)
+					} else {
+						fmt.Println("connection closed")
+					}
+					c.conn = nil
+					c.Connect()
 				} else {
-					fmt.Println("connection closed")
+					// TODO logging
+					fmt.Println("connection object is nil")
 				}
-				c.Connect()
-			} else {
-				// TODO logging
-				fmt.Println("connection object is nil")
-			}
-		}()
+			}()
+			return nil
+		} else {
+			return err
+		}
+	}
+
+	if err, tries := resilence.ResilentCall(resilentConnectFunc, 10, 1000, "Rabbitmq-Connect"); err == nil {
 		return nil
 	} else {
-		return fmt.Errorf("error, failed to connect to broker: %v", err)
+		return fmt.Errorf("finally failed to connect, attempts: %d, reason: %v", tries, err)
 	}
 }
 
