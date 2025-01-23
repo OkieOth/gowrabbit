@@ -82,10 +82,18 @@ func defaultConnectionOpts() ConnectionOpts {
 	}
 }
 
+type ConnectionState int
+
+const (
+	CONNECTED ConnectionState = iota
+	DISCONNECTED
+)
+
 type Connection struct {
 	ConnectionOpts
-	mutex sync.RWMutex
-	conn  *amqp.Connection
+	mutex      sync.RWMutex
+	conn       *amqp.Connection
+	connNotify []chan<- ConnectionState
 }
 
 func NewConnection(fn ...ConnectionOptsFunc) Connection {
@@ -95,6 +103,37 @@ func NewConnection(fn ...ConnectionOptsFunc) Connection {
 	}
 	return Connection{
 		ConnectionOpts: opts,
+	}
+}
+
+func (c *Connection) AddConnNotify(n chan<- ConnectionState) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	c.connNotify = append(c.connNotify, n)
+}
+
+func (c *Connection) DelConnNotify(n chan<- ConnectionState) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	for i, v := range c.connNotify {
+		if v == n {
+			c.connNotify = append(c.connNotify[:i], c.connNotify[i+1:]...)
+			break
+		}
+	}
+}
+
+func (c *Connection) ConnNotifyCount() int {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+	return len(c.connNotify)
+}
+
+func (c *Connection) SendConnNotify(s ConnectionState) {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+	for i := 0; i < len(c.connNotify); i++ {
+		c.connNotify[i] <- s
 	}
 }
 
