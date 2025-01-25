@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/okieoth/gowrabbit/shared/observer"
 	"github.com/okieoth/gowrabbit/shared/resilence"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -93,7 +94,7 @@ type Connection struct {
 	ConnectionOpts
 	mutex      sync.RWMutex
 	conn       *amqp.Connection
-	connNotify []chan<- ConnectionState
+	connNotify observer.Observer[ConnectionState]
 }
 
 func NewConnection(fn ...ConnectionOptsFunc) Connection {
@@ -101,74 +102,64 @@ func NewConnection(fn ...ConnectionOptsFunc) Connection {
 	for _, f := range fn {
 		f(&opts)
 	}
+	observer := observer.NewObserver[ConnectionState]()
 	return Connection{
 		ConnectionOpts: opts,
+		connNotify:     observer,
 	}
 }
 
-func (c *Connection) AddConnNotify(n chan<- ConnectionState) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-	c.connNotify = append(c.connNotify, n)
-}
+func (c *Connection) enableReconnect() {
+	go func() {
+		conClosedChan := make(chan *amqp.Error)
+		if c.conn != nil {
+			c.conn.NotifyClose(conClosedChan)
+			fmt.Println("listen for connection clossed events ...")
+			if e, ok := <-conClosedChan; ok {
+				fmt.Println("connection was closed w/ error: ", e)
 
-func (c *Connection) DelConnNotify(n chan<- ConnectionState) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-	for i, v := range c.connNotify {
-		if v == n {
-			c.connNotify = append(c.connNotify[:i], c.connNotify[i+1:]...)
-			break
+			} else {
+				fmt.Println("connection closed")
+			}
+			c.conn = nil
+			go c.NotifyConnectionClosed()
+			c.Connect()
+		} else {
+			// TODO logging
+			fmt.Println("connection object is nil")
 		}
-	}
+	}()
 }
 
-func (c *Connection) ConnNotifyCount() int {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-	return len(c.connNotify)
+func (c *Connection) NotifyConnectionClosed() {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	c.connNotify.Notify(DISCONNECTED)
 }
 
-func (c *Connection) SendConnNotify(s ConnectionState) {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-	for i := 0; i < len(c.connNotify); i++ {
-		c.connNotify[i] <- s
-	}
+func (c *Connection) NotifyConnected() {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	c.connNotify.Notify(CONNECTED)
 }
 
 func (c *Connection) Connect() error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	// TODO - build connection string
-	resilentConnectFunc := func() error {
+	resilentConnect := func() error {
 		if conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/"); err == nil {
+			go c.NotifyConnected()
 			fmt.Println("connection established")
 			c.conn = conn
-			go func() {
-				conClosedChan := make(chan *amqp.Error)
-				if c.conn != nil {
-					c.conn.NotifyClose(conClosedChan)
-					fmt.Println("listen for connection clossed events ...")
-					if e, ok := <-conClosedChan; ok {
-						fmt.Println("connection was closed w/ error: ", e)
-					} else {
-						fmt.Println("connection closed")
-					}
-					c.conn = nil
-					c.Connect()
-				} else {
-					// TODO logging
-					fmt.Println("connection object is nil")
-				}
-			}()
+			c.enableReconnect()
 			return nil
 		} else {
 			return err
 		}
 	}
 
-	if err, tries := resilence.ResilentCall(resilentConnectFunc, 10, 1000, "Rabbitmq-Connect"); err == nil {
+	if err, tries := resilence.ResilentCall(resilentConnect, 10, 1000, "Rabbitmq-Connect"); err == nil {
 		return nil
 	} else {
 		return fmt.Errorf("finally failed to connect, attempts: %d, reason: %v", tries, err)

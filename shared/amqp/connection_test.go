@@ -4,75 +4,30 @@ import (
 	"testing"
 
 	"github.com/okieoth/gowrabbit/shared/amqp"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewServer(t *testing.T) {
 	s1 := amqp.NewServer()
+	assert.Equal(t, "localhost", s1.Host)
+	assert.Equal(t, uint(5672), s1.Port)
 
 	s2 := amqp.NewServer(
 		amqp.Host("test.com"),
 	)
+	assert.Equal(t, "test.com", s2.Host)
+	assert.Equal(t, uint(5672), s1.Port)
 
 	s3 := amqp.NewServer(
 		amqp.Port(8000),
 	)
+	assert.Equal(t, "localhost", s3.Host)
+	assert.Equal(t, uint(8000), s3.Port)
 
 	s4 := amqp.NewServer(
-		amqp.Host("test.com"),
-		amqp.Port(8000),
+		amqp.Host("test2.com"),
+		amqp.Port(8001),
 	)
-}
-
-func TestAddConnNotify(t *testing.T) {
-	// Initialize a new Connection instance
-	conn := amqp.NewConnection()
-
-	// Create a channel to add
-	notifyChan := make(chan amqp.ConnectionState)
-
-	// Call AddConnNotify
-	conn.AddConnNotify(notifyChan)
-
-	// Verify that the channel is added
-	if conn.ConnNotifyCount() != 1 {
-		t.Errorf("AddConnNotify failed: expected 1, got %v", conn.ConnNotifyCount())
-	}
-
-	go func() {
-		conn.SendConnNotify(amqp.DISCONNECTED)
-	}()
-	// TODO reading with timeout
-}
-
-func TestDelConnNotify(t *testing.T) {
-	// Initialize a new Connection instance
-	conn := amqp.NewConnection()
-
-	// Create channels to add and then remove
-	notifyChan1 := make(chan amqp.ConnectionState)
-	notifyChan2 := make(chan amqp.ConnectionState)
-
-	// Add channels
-	conn.AddConnNotify(notifyChan1)
-	conn.AddConnNotify(notifyChan2)
-
-	if conn.ConnNotifyCount() != 2 {
-		t.Fatalf("Setup failed: expected 2 channels, got %d", conn.ConnNotifyCount())
-	}
-
-	// Remove one channel
-	conn.DelConnNotify(notifyChan1)
-
-	// Verify that the channel is removed
-	if conn.ConnNotifyCount() != 1 {
-		t.Errorf("DelConnNotify failed: expected 1, got %v", conn.ConnNotifyCount())
-	}
-
-	// Remove the remaining channel
-	conn.DelConnNotify(notifyChan2)
-
-	// Verify that all channels are removed
-	if conn.ConnNotifyCount() != 0 {
-		t.Errorf("DelConnNotify failed: expected no channels, got %d", conn.ConnNotifyCount())
-	}
+	assert.Equal(t, "test2.com", s4.Host)
+	assert.Equal(t, uint(8001), s4.Port)
 }
