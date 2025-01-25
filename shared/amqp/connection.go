@@ -185,21 +185,3 @@ func (c *Connection) Close() error {
 		return err
 	}
 }
-
-// type Client struct {
-// 	ClientOpts
-// }
-
-// type Connection struct {
-// 	m               *sync.Mutex
-// 	queueName       string
-// 	infolog         *log.Logger
-// 	errlog          *log.Logger
-// 	connection      *amqp.Connection
-// 	channel         *amqp.Channel
-// 	done            chan bool
-// 	notifyConnClose chan *amqp.Error
-// 	notifyChanClose chan *amqp.Error
-// 	notifyConfirm   chan amqp.Confirmation
-// 	isReady         bool
-// }
