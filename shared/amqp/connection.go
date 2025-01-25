@@ -94,7 +94,7 @@ type Connection struct {
 	ConnectionOpts
 	mutex      sync.RWMutex
 	conn       *amqp.Connection
-	connNotify observer.Observer[ConnectionState]
+	connNotify *observer.Observer[ConnectionState]
 }
 
 func NewConnection(fn ...ConnectionOptsFunc) Connection {
@@ -123,7 +123,9 @@ func (c *Connection) enableReconnect() {
 			}
 			c.conn = nil
 			go c.NotifyConnectionClosed()
-			c.Connect()
+			if err := c.Connect(); err != nil {
+				panic(err)
+			}
 		} else {
 			// TODO logging
 			fmt.Println("connection object is nil")

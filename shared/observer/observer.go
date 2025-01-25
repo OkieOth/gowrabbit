@@ -10,8 +10,8 @@ type Observer[T any] struct {
 	mutex    sync.Mutex
 }
 
-func NewObserver[T any]() Observer[T] {
-	return Observer[T]{
+func NewObserver[T any]() *Observer[T] {
+	return &Observer[T]{
 		listener: make([]chan<- T, 0),
 	}
 }
