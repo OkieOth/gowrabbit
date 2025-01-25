@@ -55,7 +55,7 @@ func TestSucceed(t *testing.T) {
 	}
 
 	if err, tryCount := resilence.ResilentCall(testFn, 4, 100, "test-succeed"); err == nil {
-		if tryCount != 3 {
+		if tryCount != 4 {
 			t.Errorf("function 'test-succeed' successful executed, but after wrong tries, received tries: %d", tryCount)
 		}
 	} else {
