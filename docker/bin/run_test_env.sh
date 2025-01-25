@@ -2,7 +2,7 @@
 
 scriptPos=${0%/*}
 
-COMPOSE_FILE=$scriptPos/docker-compose/test_env.yaml
+COMPOSE_FILE=$scriptPos/../test_env.yaml
 
 if ! docker compose -f $COMPOSE_FILE up --build --abort-on-container-exit --exit-code-from test_runner; then
   echo "error while running tests in docker compose :-/"

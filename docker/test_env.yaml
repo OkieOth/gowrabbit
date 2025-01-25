@@ -16,7 +16,7 @@ services:
 
   test_runner:
     build:
-      context: .
+      context: ..
       args:
         DOCKER_BUILDKIT: 1
       dockerfile: Dockerfile.testrunner

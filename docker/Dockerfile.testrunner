@@ -1,16 +1,25 @@
+FROM rabbitmq:4-management-alpine as build
+
 FROM golang:1.23 AS build-stage
 
 WORKDIR /app
 
-COPY go.mod go.sum ./
-RUN go mod download
+COPY Makefile .
 
+
+COPY shared ./shared
+RUN cd shared && go mod download
 COPY pub ./pub
+RUN cd pub && go mod download
 COPY sub ./sub
-COPY pkg ./pkg
+RUN cd sub && go mod download
 
 FROM build-stage AS run-test-stage
 
-RUN go test -v --skip "_IT" ./...
+COPY --from=build /usr/local/bin/rabbitmqadmin /usr/bin/rabbitmqadmin
 
-CMD ["go", "test", "-v", "./..."]
+RUN cd pub && go test -v --skip "_IT" ./...
+RUN cd sub && go test -v --skip "_IT" ./...
+RUN cd shared && go test -v --skip "_IT" ./...
+
+CMD ["make", "test"]
