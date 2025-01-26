@@ -1,4 +1,6 @@
 ![WIP](https://img.shields.io/badge/work%20in%20progress-red)
+[![CI](https://github.com/OkieOth/gowrabbit/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/OkieOth/gowrabbit/actions/workflows/ci.yml)
+[![go report card](https://goreportcard.com/badge/github.com/OkieOth/gowrabbit)](https://goreportcard.com/report/github.com/OkieOth/gowrabbit)
 
 # gowrabbit
 
