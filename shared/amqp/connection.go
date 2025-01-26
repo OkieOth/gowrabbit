@@ -55,6 +55,12 @@ type ConnectionOpts struct {
 	User     string
 	Password string
 	Servers  []Server
+	// How many miliseconds should be waited before the next try. With every try the
+	// wait time is doubled
+	ResilenceWaitMilis int
+
+	// Maximum number of retries in case of connection issues
+	ResilenceMaxRetries int
 }
 
 func User(user string) ConnectionOptsFunc {
@@ -75,11 +81,25 @@ func Servers(servers []Server) ConnectionOptsFunc {
 	}
 }
 
+func ResilenceMaxRetries(maxRetries int) ConnectionOptsFunc {
+	return func(o *ConnectionOpts) {
+		o.ResilenceMaxRetries = maxRetries
+	}
+}
+
+func ResilenceWaitMilis(waitMilis int) ConnectionOptsFunc {
+	return func(o *ConnectionOpts) {
+		o.ResilenceWaitMilis = waitMilis
+	}
+}
+
 func defaultConnectionOpts() ConnectionOpts {
 	return ConnectionOpts{
-		User:     "guest",
-		Password: "guest",
-		Servers:  make([]Server, 0),
+		User:                "guest",
+		Password:            "guest",
+		Servers:             make([]Server, 0),
+		ResilenceMaxRetries: 10,
+		ResilenceWaitMilis:  1000,
 	}
 }
 
@@ -145,12 +165,37 @@ func (c *Connection) NotifyConnected() {
 	c.connNotify.Notify(CONNECTED)
 }
 
+func GetConnectionString(user string, password string, servers []Server) (string, error) {
+	if user == "" {
+		return "", fmt.Errorf("emtpy user isn't allowed for the connection string")
+	}
+	if password == "" {
+		return "", fmt.Errorf("emtpy password isn't allowed for the connection string")
+	}
+	if (servers == nil) || (len(servers) == 0) {
+		return "", fmt.Errorf("no servers for the connection string given")
+	}
+	serversStr := ""
+	for i, s := range servers {
+		if i != 0 {
+			serversStr += ","
+		}
+		serversStr += fmt.Sprintf("%s:%d", s.Host, s.Port)
+	}
+	// e.g. "amqp://user:password@node1:5672,node2:5672,node3:5672/"
+	return fmt.Sprintf("amqp://%s:%s@%s/", user, password, serversStr), nil
+}
+
 func (c *Connection) Connect() error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	// TODO - build connection string
 	resilentConnect := func() error {
-		if conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/"); err == nil {
+		conStr, err := GetConnectionString(c.User, c.Password, c.Servers)
+		if err != nil {
+			return fmt.Errorf("Error while building connection string: %v", err)
+		}
+		if conn, err := amqp.Dial(conStr); err == nil {
 			go c.NotifyConnected()
 			fmt.Println("connection established")
 			c.conn = conn
@@ -161,7 +206,7 @@ func (c *Connection) Connect() error {
 		}
 	}
 
-	if err, tries := resilence.ResilentCall(resilentConnect, 10, 1000, "Rabbitmq-Connect"); err == nil {
+	if err, tries := resilence.ResilentCall(resilentConnect, c.ResilenceMaxRetries, c.ResilenceWaitMilis, "Rabbitmq-Connect"); err == nil {
 		return nil
 	} else {
 		return fmt.Errorf("finally failed to connect, attempts: %d, reason: %v", tries, err)

@@ -3,3 +3,4 @@ go 1.23.1
 use ./pub
 use ./sub
 use ./shared
+use ./tests
