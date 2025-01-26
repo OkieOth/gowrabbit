@@ -23,3 +23,21 @@ func TestConnectionFailure_IT(t *testing.T) {
 	err := connection.Connect()
 	assert.NotNil(t, err)
 }
+
+func TestConnection_IT(t *testing.T) {
+	user, password, host, port := getConnParamsToUse()
+
+	connection := amqp.NewConnection(
+		amqp.User(user),
+		amqp.Password(password),
+		amqp.Servers([]amqp.Server{
+			amqp.NewServer(
+				amqp.Host(host),
+				amqp.Port(uint(port)),
+			),
+		}),
+	)
+	//fmt.Printf("Connection: %v\n", connection)
+	err := connection.Connect()
+	assert.Nil(t, err)
+}

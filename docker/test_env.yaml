@@ -19,12 +19,11 @@ services:
       context: ..
       args:
         DOCKER_BUILDKIT: 1
-      dockerfile: Dockerfile.testrunner
+      dockerfile: docker/Dockerfile.testrunner
     depends_on:
-      init_rabbitmq:
-        condition: service_healthy
+      - init_rabbitmq
     environment:
-      - RABBITMQ_SERVER=rabbitmq
+      - RABBIT_SERVER=rabbitmq
 
 
 

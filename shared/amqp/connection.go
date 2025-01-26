@@ -193,7 +193,7 @@ func (c *Connection) Connect() error {
 	resilentConnect := func() error {
 		conStr, err := GetConnectionString(c.User, c.Password, c.Servers)
 		if err != nil {
-			return fmt.Errorf("Error while building connection string: %v", err)
+			return fmt.Errorf("error while building connection string: %v", err)
 		}
 		if conn, err := amqp.Dial(conStr); err == nil {
 			go c.NotifyConnected()

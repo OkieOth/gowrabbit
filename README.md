@@ -11,4 +11,12 @@ convenient pub/sub scenarios.
 ```bash
 go test ./pub/...
 go test ./sub/...
+go test ./shared/...
+
+# or use `make test`
 ```
+
+# Additional stuff
+
+
+

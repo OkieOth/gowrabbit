@@ -13,6 +13,8 @@ COPY pub ./pub
 RUN cd pub && go mod download
 COPY sub ./sub
 RUN cd sub && go mod download
+COPY tests ./tests
+RUN cd tests && go mod download
 
 FROM build-stage AS run-test-stage
 
@@ -22,4 +24,4 @@ RUN cd pub && go test -v --skip "_IT" ./...
 RUN cd sub && go test -v --skip "_IT" ./...
 RUN cd shared && go test -v --skip "_IT" ./...
 
-CMD ["make", "test"]
+CMD ["make", "integration-test"]
