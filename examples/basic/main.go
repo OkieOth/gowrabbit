@@ -1,17 +1,18 @@
 package main
 
 import (
-	"fmt"
-
 	"time"
 
 	"github.com/okieoth/gowrabbit/pub"
 	"github.com/okieoth/gowrabbit/shared/amqp"
 	"github.com/okieoth/gowrabbit/sub"
+
+	"basic/logger"
 )
 
 func main() {
-	fmt.Println("Hello from main :)")
+
+	log := logger.NewLogger()
 	pub.DummyPub()
 	sub.DummySub()
 
@@ -26,13 +27,12 @@ func main() {
 	)
 	//fmt.Printf("Connection: %v\n", connection)
 	if err := connection.Connect(); err == nil {
-		fmt.Println("Successfully connected :)")
+		log.Info("Successfully connected :)")
 		for {
-			fmt.Println("I am going to sleep for 10s ...")
+			log.Info("I am going to sleep for 10s ...")
 			time.Sleep(10 * time.Second)
 		}
 	} else {
-		fmt.Println("Connection failed :-/ ")
-		fmt.Println(err)
+		log.Error("Connection failed: %v", err)
 	}
 }
